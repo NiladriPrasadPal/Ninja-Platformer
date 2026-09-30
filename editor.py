@@ -11,7 +11,7 @@ class Editor:
     def __init__(self):
         pygame.init()
 
-        pygame.display.set_caption('editor')
+        pygame.display.set_caption('Level Editor')
         self.screen = pygame.display.set_mode((640, 480))
         self.display = pygame.Surface((320, 240))
 
