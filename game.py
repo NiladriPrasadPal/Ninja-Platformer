@@ -23,6 +23,21 @@ class Game:
 
         self.clock = pygame.time.Clock()
 
+        self.font = pygame.font.Font(
+            'data/fonts/PressStart2P-Regular.ttf',
+            12
+        )
+
+        self.small_font = pygame.font.Font(
+            'data/fonts/PressStart2P-Regular.ttf',
+            8
+        )
+
+        self.big_font = pygame.font.Font(
+            'data/fonts/PressStart2P-Regular.ttf',
+            16
+        )
+
         self.movement = [False, False]
 
         self.assets = {
@@ -97,29 +112,55 @@ class Game:
         self.player.health = self.player.max_health
 
     def draw_shop(self):
-        shop = pygame.Surface(self.display.get_size(), pygame.SRCALPHA)
-        shop.fill((0, 0, 0, 190))
-        self.display.blit(shop, (0, 0))
+        overlay = pygame.Surface(self.display.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 170))
+        self.display.blit(overlay, (0, 0))
 
-        font = pygame.font.Font(None, 28)
-        small_font = pygame.font.Font(None, 20)
+        shop_x = 35
+        shop_y = 20
+        shop_width = 250
+        shop_height = 200
 
-        title = font.render("UPGRADE SHOP", True, (255, 255, 255))
-        coins = font.render(
-            f"Coins: {self.player.coins}",
-            True,
-            (255, 220, 50)
+        pygame.draw.rect(
+            self.display,
+            (25, 25, 35),
+            (shop_x, shop_y, shop_width, shop_height)
+        )
+
+        pygame.draw.rect(
+            self.display,
+            (120, 120, 140),
+            (shop_x, shop_y, shop_width, shop_height),
+            2
+        )
+
+        title = self.big_font.render(
+            "UPGRADE SHOP", 
+            True, 
+            (255, 255, 255)
         )
 
         self.display.blit(
             title,
             (
-                self.display.get_width() // 2 - title.get_width() // 2,
-                25
+                shop_x + shop_width // 2 - title.get_width() // 2,
+                shop_y + 12
             )
         )
 
-        self.display.blit(coins, (20, 20))
+        coins = self.font.render(
+            f"Coins: {self.player.coins}",
+            True,
+            (255, 220, 60)
+        )
+
+        self.display.blit(
+            coins,
+            (
+                shop_x + 12,
+                shop_y + 38
+            )
+        )
 
         speed_cost = 10 + self.player.speed_level * 10
         dash_cost = 15 + self.player.dash_level * 15
@@ -128,85 +169,170 @@ class Game:
         upgrades = [
             (
                 "1",
-                "Speed +25%",
+                "Speed",
+                "Move faster",
                 speed_cost,
                 self.player.speed_level
             ),
             (
                 "2",
-                "Dash Cooldown -10%",
+                "Dash Cooldown",
+                "Lower cooldown",
                 dash_cost,
                 self.player.dash_level
             ),
             (
                 "3",
-                "Max Health +1",
+                "HEALTH",
+                "Increase max HP",
                 health_cost,
                 self.player.health_level
             )
         ] 
 
-        y = 80
+        card_y = shop_y + 80
 
-        for key, name, cost, level in upgrades:
-            text = font.render(
-                f"[{key}] {name}",
+        for key, name, description, cost, level in upgrades:
+            card_x = shop_x + 10
+            card_width = shop_width - 20
+            card_height = 38
+
+            pygame.draw.rect(
+                self.display,
+                (40, 40, 55),
+                (card_x, card_y, card_width, card_height)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                (80, 80, 100),
+                (card_x, card_y, card_width, card_height)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                (65, 65, 85),
+                (card_x + 5, card_y + 7, 22, 22)
+            )
+
+            key_text = self.font.render(
+                key,
                 True,
                 (255, 255, 255)
             )
 
-            price = small_font.render(
-                f"Cost: {cost} coins    Level: {level}",
-                True,
-                (200, 200, 200)
+            self.display.blit(
+                key_text,
+                (
+                    card_x + 12,
+                    card_y + 11
+                )
             )
 
-            self.display.blit(text, (45, y))
-            self.display.blit(price, (65, y + 25))
+            name_text = self.font.render(
+                name,
+                True,
+                (255, 255, 255)
+            )
 
-            y += 55
+            self.display.blit(
+                name_text,
+                (
+                    card_x + 35,
+                    card_y + 5
+                )
+            )
 
-        close_text = small_font.render(
-            "Press M to close",
+            self.display.blit(
+                name_text,
+                (
+                    card_x + 35,
+                    card_y + 5
+                )
+            )
+
+            description_text = self.small_font.render(
+                description,
+                True,
+                (170, 170, 180)
+            )
+
+            self.display.blit(
+                description_text,
+                (
+                    card_x + 35,
+                    card_y + 21
+                )
+            )
+
+            price_text = self.small_font.render(
+                f"Cost: {cost} C",
+                True,
+                (255, 220, 60)
+            )
+
+            self.display.blit(
+                price_text,
+                (
+                    card_x + card_width - price_text.get_width() - 7,
+                    card_y + 5
+                )
+            )
+
+            level_text = self.small_font.render(
+                f"LV {level}",
+                True,
+                (130, 200, 255)
+            )
+
+            self.display.blit(
+                level_text,
+                (
+                    card_x + card_width - level_text.get_width() - 7,
+                    card_y + 20
+                )
+            )
+
+            card_y += 43
+
+        close_text = self.small_font.render(
+            "M - CLOSE",
             True,
-            (180, 180, 180)
+            (150, 150, 150)
         )
 
         self.display.blit(
             close_text,
             (
-                self.display.get_width() // 2 -
-                close_text.get_width() // 2,
-                215
+                shop_x + shop_width // 2 - close_text.get_width() // 2,
+                shop_y + shop_height - 15
             )
         )
 
     def draw_hud(self):
-        bar_x = 10
-        bar_y = 10
-        bar_width = 80
-        bar_height = 10
+        health_x = 10
+        health_y = 10
+        health_width = 80
+        health_height = 10
 
         pygame.draw.rect(
             self.display,
-            (50, 50, 50),
-            (bar_x, bar_y, bar_width, bar_height)
+            (35, 35, 40),
+            (health_x, health_y, health_width, health_height)
         )
 
-        health_width = int(
-            bar_width * 
+        health_width_current = int(
+            health_width * 
             (self.player.health / self.player.max_health)
         )
 
         pygame.draw.rect(
             self.display,
-            (220, 50, 50),
-            (bar_x, bar_y, health_width, bar_height)
+            (220, 60, 60),
+            (health_x, health_y, health_width_current, health_height)
         )
 
-        font = pygame.font.Font(None, 18)
-
-        health_text = font.render(
+        health_text = self.small_font.render(
             f"{self.player.health}/{self.player.max_health}",
             True,
             (255, 255, 255)
@@ -214,11 +340,11 @@ class Game:
 
         self.display.blit(
             health_text,
-            (bar_x + bar_width + 5, bar_y - 3)
+            (health_x + health_width + 5, health_y)
         )
 
-        coin_text = font.render(
-            f"Coins: {self.player.coins}",
+        coin_text = self.font.render(
+            f"{self.player.coins}",
             True,
             (255, 220, 50)
         )
