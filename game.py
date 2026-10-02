@@ -70,6 +70,7 @@ class Game:
         self.load_level(self.level)
 
         self.screenshake = 0
+        self.shop_open = False
 
     def load_level(self, map_id):
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
@@ -93,6 +94,139 @@ class Game:
         self.scroll = [0, 0]
         self.dead = 0
         self.transition = -30
+        self.player.health = self.player.max_health
+
+    def draw_shop(self):
+        shop = pygame.Surface(self.display.get_size(), pygame.SRCALPHA)
+        shop.fill((0, 0, 0, 190))
+        self.display.blit(shop, (0, 0))
+
+        font = pygame.font.Font(None, 28)
+        small_font = pygame.font.Font(None, 20)
+
+        title = font.render("UPGRADE SHOP", True, (255, 255, 255))
+        coins = font.render(
+            f"Coins: {self.player.coins}",
+            True,
+            (255, 220, 50)
+        )
+
+        self.display.blit(
+            title,
+            (
+                self.display.get_width() // 2 - title.get_width() // 2,
+                25
+            )
+        )
+
+        self.display.blit(coins, (20, 20))
+
+        speed_cost = 10 + self.player.speed_level * 10
+        dash_cost = 15 + self.player.dash_level * 15
+        health_cost = 20 + self.player.health_level * 20
+
+        upgrades = [
+            (
+                "1",
+                "Speed +25%",
+                speed_cost,
+                self.player.speed_level
+            ),
+            (
+                "2",
+                "Dash Cooldown -10%",
+                dash_cost,
+                self.player.dash_level
+            ),
+            (
+                "3",
+                "Max Health +1",
+                health_cost,
+                self.player.health_level
+            )
+        ] 
+
+        y = 80
+
+        for key, name, cost, level in upgrades:
+            text = font.render(
+                f"[{key}] {name}",
+                True,
+                (255, 255, 255)
+            )
+
+            price = small_font.render(
+                f"Cost: {cost} coins    Level: {level}",
+                True,
+                (200, 200, 200)
+            )
+
+            self.display.blit(text, (45, y))
+            self.display.blit(price, (65, y + 25))
+
+            y += 55
+
+        close_text = small_font.render(
+            "Press M to close",
+            True,
+            (180, 180, 180)
+        )
+
+        self.display.blit(
+            close_text,
+            (
+                self.display.get_width() // 2 -
+                close_text.get_width() // 2,
+                215
+            )
+        )
+
+    def draw_hud(self):
+        bar_x = 10
+        bar_y = 10
+        bar_width = 80
+        bar_height = 10
+
+        pygame.draw.rect(
+            self.display,
+            (50, 50, 50),
+            (bar_x, bar_y, bar_width, bar_height)
+        )
+
+        health_width = int(
+            bar_width * 
+            (self.player.health / self.player.max_health)
+        )
+
+        pygame.draw.rect(
+            self.display,
+            (220, 50, 50),
+            (bar_x, bar_y, health_width, bar_height)
+        )
+
+        font = pygame.font.Font(None, 18)
+
+        health_text = font.render(
+            f"{self.player.health}/{self.player.max_health}",
+            True,
+            (255, 255, 255)
+        )
+
+        self.display.blit(
+            health_text,
+            (bar_x + bar_width + 5, bar_y - 3)
+        )
+
+        coin_text = font.render(
+            f"Coins: {self.player.coins}",
+            True,
+            (255, 220, 50)
+        )
+
+        self.display.blit(
+            coin_text,
+            (10, 27)
+        )
 
     def run(self):
         pygame.mixer.music.load('data/music.wav')
@@ -137,13 +271,17 @@ class Game:
             self.tilemap.render(self.display, offset=render_scroll)
 
             for enemy in self.enemies.copy():
-                kill = enemy.update(self.tilemap, (0, 0))
+                if not self.shop_open:
+                    kill = enemy.update(self.tilemap, (0, 0))
+                else:
+                    kill = False
                 enemy.render(self.display, offset=render_scroll)
                 if kill:
                     self.enemies.remove(enemy)
 
             if not self.dead:
-                self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+                if not self.shop_open:
+                    self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                 self.player.render(self.display, offset=render_scroll)
 
             for projectile in self.projectiles.copy():
@@ -160,7 +298,7 @@ class Game:
                 elif abs(self.player.dashing) < 50:
                     if self.player.rect().collidepoint(projectile[0]):
                         self.projectiles.remove(projectile)
-                        self.dead += 1
+                        self.player.take_damage(1)
                         self.sfx['hit'].play()
                         self.screenshake = max(16, self.screenshake)
                         for i in range(30):
@@ -193,6 +331,35 @@ class Game:
                     pygame.quit()
                     sys.exit()
                 if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_m:
+                        self.shop_open = not self.shop_open
+                        self.movement = [False, False]
+                    if self.shop_open:
+                        if event.key == pygame.K_1:
+                            cost = 10 + self.player.speed_level * 10
+                            if self.player.coins >= cost:
+                                self.player.coins -= cost
+                                self.player.speed_level += 1
+                        if event.key == pygame.K_2:
+                            cost = 15 + self.player.dash_level * 15
+                            if self.player.coins >= cost:
+                                self.player.coins -= cost
+                                self.player.dash_level += 1
+                                self.player.dash_cooldown = max(
+                                    20,
+                                    60 - self.player.dash_level * 10
+                                )
+                        if event.key == pygame.K_3:
+                            cost = 20 + self.player.health * 20
+                            if self.player.coins >= cost:
+                                self.player.coins = cost
+                                self.player.health_level += 1
+
+                                self.player.max_health += 1
+                                self.player.health = self.player.max_health
+
+                        continue
+
                     if event.key == pygame.K_LEFT:
                         self.movement[0] = True
                     if event.key == pygame.K_RIGHT:
@@ -206,6 +373,11 @@ class Game:
                         self.movement[0] = False
                     if event.key == pygame.K_RIGHT:
                         self.movement[1] = False
+
+            self.draw_hud()
+
+            if self.shop_open:
+                self.draw_shop()
 
             if self.transition:
                 transition_surf = pygame.Surface(self.display.get_size())

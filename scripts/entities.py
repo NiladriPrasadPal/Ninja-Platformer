@@ -117,6 +117,7 @@ class Enemy(PhysicsEntity):
 
         if abs(self.game.player.dashing) >= 50:
             if self.rect().colliderect(self.game.player.rect()):
+                self.game.player.coins += 5
                 self.game.screenshake = max(16, self.game.screenshake)
                 self.game.sfx['hit'].play()
                 for i in range(30):
@@ -136,17 +137,39 @@ class Enemy(PhysicsEntity):
         else:
             surf.blit(self.game.assets['gun'], (self.rect().centerx + 4 - offset[0], self.rect().centery - offset[1]))
                                     
-
 class Player(PhysicsEntity):
     def __init__(self, game, pos, size):
         super().__init__(game, 'player', pos, size)
+
         self.air_time = 0
         self.jumps = 1
         self.wall_slide = False
         self.dashing = 0
 
+        self.coins = 0
+
+        self.speed_level = 0
+        self.dash_level = 0
+        self.health_level = 0
+
+        self.max_health = 3
+        self.health = self.max_health
+
+        self.dash_cooldown = 60
+        self.dash_timer = 0
+
     def update(self, tilemap, movement=(0, 0)):
+        speed = 1 + self.speed_level * 0.25
+
+        movement = (
+            movement[0] * speed, 
+            movement[1]
+        )
+
         super().update(tilemap, movement=movement)
+
+        if self.dash_timer > 0:
+            self.dash_timer -= 1
         
         self.air_time += 1
 
@@ -225,9 +248,22 @@ class Player(PhysicsEntity):
             return True
 
     def dash(self):
-        if not self.dashing:
+        if not self.dashing and self.dash_timer <= 0:
             self.game.sfx['dash'].play()
+
             if self.flip:
                 self.dashing = -60
             else:
                 self.dashing = 60
+
+            self.dash_timer = self.dash_cooldown
+
+    def take_damage(self, amount=1):
+        self.health -= amount
+
+        self.game.screenshake = max(16, self.game.screenshake)
+        self.game.sfx['hit'].play()
+
+        if self.health <= 0:
+            self.health = 0
+            self.game.dead += 1
