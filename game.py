@@ -18,7 +18,8 @@ class Game:
 
         pygame.display.set_caption('Ninja Platformer')
         self.screen = pygame.display.set_mode((640, 480))
-        self.display = pygame.Surface((320, 240))
+        self.display = pygame.Surface((320, 240), pygame.SRCALPHA)
+        self.display_2 = pygame.Surface((320, 240))
 
         self.clock = pygame.time.Clock()
 
@@ -81,7 +82,8 @@ class Game:
 
     def run(self):
         while True:
-            self.display.blit(self.assets['background'],(0, 0))
+            self.display.fill((0, 0, 0, 0))
+            self.display_2.blit(self.assets['background'],(0, 0))
 
             self.screenshake = max(0, self.screenshake - 1)
 
@@ -152,6 +154,11 @@ class Game:
                 if kill:
                     self.sparks.remove(spark)
 
+            display_mask = pygame.mask.from_surface(self.display)
+            display_silhouette = display_mask.to_surface(setcolor=(0, 0, 0, 180), unsetcolor=(0, 0, 0, 0))
+            for offset in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                self.display_2.blit(display_silhouette, offset)
+
             for particle in self.particles.copy():
                 kill = particle.update()
                 particle.render(self.display, offset=render_scroll)
@@ -184,10 +191,12 @@ class Game:
                 pygame.draw.circle(transition_surf, (255, 255, 255), (self.display.get_width() // 2, self.display.get_height() // 2), (30 - abs(self.transition)) * 8)
                 transition_surf.set_colorkey((255, 255, 255))
                 self.display.blit(transition_surf, (0, 0))
+
+            self.display_2.blit(self.display, (0, 0))
             
             screenshake_offset = (random.random() * self.screenshake - self.screenshake / 2, random.random() * self.screenshake - self.screenshake / 2)
             
-            self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size()), screenshake_offset)
+            self.screen.blit(pygame.transform.scale(self.display_2, self.screen.get_size()), screenshake_offset)
             pygame.display.update()
             self.clock.tick(60)
 
