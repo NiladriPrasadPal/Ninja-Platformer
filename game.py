@@ -60,6 +60,8 @@ class Game:
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'gun': load_image('gun.png'),
             'projectile': load_image('projectile.png'),
+            'title': load_image('title_background.png'),
+            'title_sword': load_image('title_sword.png'),
         }
 
         self.sfx = {
@@ -90,6 +92,10 @@ class Game:
         self.shop_animation = 0
         self.shop_selected = 0
         self.shop_flash = 0
+
+        self.title_screen = True
+        self.title_timer = 0
+        self.title_started = False
 
     def load_level(self, map_id):
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
@@ -741,6 +747,109 @@ class Game:
             }
         ]
 
+    def draw_title_screen(self):
+        self.title_timer += 1
+        self.display.fill((0, 0, 0))
+
+        if self.title_timer > 80:
+            background_progress = min(
+                1, (self.title_timer - 80) / 60
+            )
+
+            background_alpha = int(255 * background_progress)
+
+            background = self.assets['background'].copy()
+            background.set_alpha(background_alpha)
+            self.display.blit(
+                background, 
+                (
+                    self.display.get_width() // 2 - background.get_width() // 2,
+                    self.display.get_height() // 2 - background.get_height() // 2
+                )
+            )
+
+        text_fade = min(255, self.title_timer * 4)
+        title_image = self.assets['title'].copy()
+        title_image.set_alpha(text_fade)
+        title_x = (
+            self.display.get_width() // 2 - title_image.get_width() // 2
+        )
+
+        title_y = (
+            self.display.get_height() // 2 - title_image.get_height() // 2
+        )
+
+
+        if self.title_timer > 45:
+            sword_progress = min(
+                1, (self.title_timer - 45) / 35
+            )
+
+            sword_progress = 1 - (1 - sword_progress) ** 3
+            sword = self.assets['title_sword']
+            sword_x = (
+                self.display.get_width() // 2 - sword.get_width() // 2
+            )
+
+            start_y = -sword.get_height() - 10
+
+            final_y = (
+                self.display.get_height() // 2 - sword.get_height() // 2
+            )
+            sword_y = start_y + (final_y - start_y) * sword_progress
+
+            self.display.blit(
+                sword, (sword_x, int(sword_y))
+            )
+
+        self.display.blit(
+            title_image, (title_x, title_y)
+        )
+        
+        if 78 <= self.title_timer <= 90:
+            shake_x = random.randint(-3, 3)
+            shake_y = random.randint(-2, 2)
+            self.display.scroll(shake_x, shake_y)
+
+
+        if self.title_timer > 200:
+            fresh_progress = min(
+                1, (self.title_timer - 140) / 30
+            )
+
+            fresh_alpha = int(255 * fresh_progress)
+            fresh_start = self.font_big.render(
+                'FRESH START',
+                True,
+                (255, 255, 255)
+            )
+            fresh_start.set_alpha(
+                fresh_alpha
+            )
+
+            self.display.blit(
+                fresh_start,
+                (self.display.get_width() // 2 - fresh_start.get_width() // 2, 190)
+            )
+
+            if self.title_timer > 230:
+                press_alpha = int(255 * min(1, (self.title_timer - 170) / 30))
+
+                press_enter = self.font.render(
+                    'PRESS ENTER',
+                    True,
+                    (200, 200, 200)
+                )
+
+                press_enter.set_alpha(
+                    press_alpha
+                )
+
+                self.display.blit(
+                    press_enter,
+                    (self.display.get_width() // 2 - press_enter.get_width() // 2, 210)
+                )
+
     def run(self):
         pygame.mixer.music.load('data/music.wav')
         pygame.mixer.music.set_volume(0.5)
@@ -749,6 +858,23 @@ class Game:
         self.sfx['ambience'].play(-1)
 
         while True:
+            if self.title_screen:
+                self.draw_title_screen()
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_RETURN:
+                            self.title_screen = False
+
+                self.screen.blit(
+                    pygame.transform.scale(self.display, self.screen.get_size()), (0, 0)
+                )
+                pygame.display.update()
+                self.clock.tick(60)
+                continue
+
             self.display.fill((0, 0, 0, 0))
             self.display_2.blit(self.assets['background'],(0, 0))
 
