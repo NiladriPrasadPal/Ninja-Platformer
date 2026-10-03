@@ -23,20 +23,21 @@ class Game:
 
         self.clock = pygame.time.Clock()
 
+        self.font_big = pygame.font.Font(
+            'data/fonts/PressStart2P-Regular.ttf',
+            11
+        )
+
         self.font = pygame.font.Font(
             'data/fonts/PressStart2P-Regular.ttf',
-            12
+            6
         )
 
-        self.small_font = pygame.font.Font(
+        self.font_small = pygame.font.Font(
             'data/fonts/PressStart2P-Regular.ttf',
-            8
+            5
         )
 
-        self.big_font = pygame.font.Font(
-            'data/fonts/PressStart2P-Regular.ttf',
-            16
-        )
 
         self.movement = [False, False]
 
@@ -86,6 +87,9 @@ class Game:
 
         self.screenshake = 0
         self.shop_open = False
+        self.shop_animation = 0
+        self.shop_selected = 0
+        self.shop_flash = 0
 
     def load_level(self, map_id):
         self.tilemap.load('data/maps/' + str(map_id) + '.json')
@@ -112,29 +116,53 @@ class Game:
         self.player.health = self.player.max_health
 
     def draw_shop(self):
+        if self.shop_open:
+            self.shop_animation = min(10, self.shop_animation + 1)
+        else:
+            self.shop_animation = max(0, self.shop_animation - 1)
+        progress = self.shop_animation / 10
+
+        if progress <= 0:
+            return
+        
         overlay = pygame.Surface(self.display.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 170))
+        overlay.fill(
+            (0, 0, 0, int(150 * progress))
+        )
+
         self.display.blit(overlay, (0, 0))
 
-        shop_x = 35
-        shop_y = 20
-        shop_width = 250
-        shop_height = 200
+        shop_width = 286
+        shop_height = 224
+        shop_x = 17
+        shop_y = int(-224 + 14 + 210 * progress)
 
         pygame.draw.rect(
             self.display,
-            (25, 25, 35),
+            (22, 24, 32),
             (shop_x, shop_y, shop_width, shop_height)
         )
 
         pygame.draw.rect(
             self.display,
-            (120, 120, 140),
+            (110, 115, 135),
             (shop_x, shop_y, shop_width, shop_height),
             2
         )
 
-        title = self.big_font.render(
+        pygame.draw.rect(
+            self.display,
+            (55, 60, 75),
+            (
+                shop_x + 4,
+                shop_y + 4,
+                shop_width - 8,
+                shop_height - 8
+            ),
+            1
+        )
+
+        title = self.font_big.render(
             "UPGRADE SHOP", 
             True, 
             (255, 255, 255)
@@ -144,195 +172,281 @@ class Game:
             title,
             (
                 shop_x + shop_width // 2 - title.get_width() // 2,
-                shop_y + 12
+                shop_y + 10
             )
         )
 
-        coins = self.font.render(
-            f"Coins: {self.player.coins}",
+        pygame.draw.circle(
+            self.display, 
+            (255, 210, 50),
+            (shop_x + 15, shop_y + 34),
+            5
+        )
+
+        pygame.draw.circle(
+            self.display,
+            (180, 130, 20),
+            (shop_x + 15, shop_y + 34),
+            5, 
+            1
+        )
+
+        coin_text = self.font.render(
+            str(self.player.coins),
             True,
-            (255, 220, 60)
+            (255, 220, 70)
         )
 
         self.display.blit(
-            coins,
+            coin_text,
             (
-                shop_x + 12,
-                shop_y + 38
+                shop_x + 25,
+                shop_y + 30
             )
         )
 
-        speed_cost = 10 + self.player.speed_level * 10
-        dash_cost = 15 + self.player.dash_level * 15
-        health_cost = 20 + self.player.health_level * 20
+        upgrades = self.get_upgrade_info()
 
-        upgrades = [
-            (
-                "1",
-                "Speed",
-                "Move faster",
-                speed_cost,
-                self.player.speed_level
-            ),
-            (
-                "2",
-                "Dash Cooldown",
-                "Lower cooldown",
-                dash_cost,
-                self.player.dash_level
-            ),
-            (
-                "3",
-                "HEALTH",
-                "Increase max HP",
-                health_cost,
-                self.player.health_level
+        card_x = shop_x + 9
+        card_width = shop_width - 18
+        card_height = 48
+
+        first_card_y = shop_y + 45
+        card_gap = 5
+
+        for i, upgrade in enumerate(upgrades):
+            card_offset = int((1 - progress) * 30)
+
+            card_y = (
+                first_card_y + 
+                i * (card_height + card_gap) + 
+                card_offset
             )
-        ] 
 
-        card_y = shop_y + 80
+            selected = (
+                i == self.shop_selected
+            )
 
-        for key, name, description, cost, level in upgrades:
-            card_x = shop_x + 10
-            card_width = shop_width - 20
-            card_height = 38
+            affordable = (
+                self.player.coins >= upgrade['cost']
+            )
+
+            if selected:
+                card_background = (48, 52, 68)
+                border_color = (255, 220, 70)
+            else:
+                card_background = (32, 35, 45)
+                border_color = (65, 70, 85)
+
+            if not affordable:
+                name_color = (130, 130, 140)
+            else:
+                name_color = (255, 255, 255)
 
             pygame.draw.rect(
                 self.display,
-                (40, 40, 55),
+                card_background,
                 (card_x, card_y, card_width, card_height)
             )
 
             pygame.draw.rect(
                 self.display,
-                (80, 80, 100),
-                (card_x, card_y, card_width, card_height)
+                border_color,
+                (card_x, card_y, card_width, card_height),
+                2 if selected else 1
             )
+
+            key_box_x = card_x + 5
+            key_box_y = card_y + 5
 
             pygame.draw.rect(
                 self.display,
-                (65, 65, 85),
-                (card_x + 5, card_y + 7, 22, 22)
+                (55, 58, 72),
+                (key_box_x, key_box_y, 22, 22)
             )
 
             key_text = self.font.render(
-                key,
-                True,
+                str(i + 1),
+                True, 
                 (255, 255, 255)
             )
 
             self.display.blit(
                 key_text,
                 (
-                    card_x + 12,
-                    card_y + 11
+                    key_box_x + 8,
+                    key_box_y + 7
                 )
+            )
+
+            self.draw_upgrade_icon(
+                upgrade['icon'],
+                card_x + 32,
+                card_y + 5
             )
 
             name_text = self.font.render(
-                name,
+                upgrade['name'],
                 True,
-                (255, 255, 255)
+                name_color
             )
 
             self.display.blit(
                 name_text,
                 (
-                    card_x + 35,
+                    card_x + 60,
                     card_y + 5
                 )
             )
 
-            self.display.blit(
-                name_text,
-                (
-                    card_x + 35,
-                    card_y + 5
-                )
-            )
-
-            description_text = self.small_font.render(
-                description,
+            description_text = self.font_small.render(
+                upgrade['description'],
                 True,
-                (170, 170, 180)
+                (150, 155, 170)
             )
 
             self.display.blit(
                 description_text,
                 (
-                    card_x + 35,
-                    card_y + 21
+                    card_x + 60,
+                    card_y + 18
                 )
             )
 
-            price_text = self.small_font.render(
-                f"Cost: {cost} C",
+            current_text = self.font_small.render(
+                f"NOW {upgrade['current']}",
                 True,
-                (255, 220, 60)
+                (170, 175, 190)
+            )
+
+            next_text = self.font_small.render(
+                f"NEXT {upgrade['next']}",
+                True,
+                (100, 210, 150)
+            )
+
+            self.display.blit(
+                current_text,
+                (
+                    card_x + 60,
+                    card_y + 30
+                )
+            )
+
+            self.display.blit(
+                next_text,
+                (
+                    card_x + 112,
+                    card_y + 30
+                )
+            )
+
+            price_color = (
+                (255, 220, 70)
+                if affordable
+                else
+                (120, 120, 125)
+            )
+
+            price_text = self.font.render(
+                f"{upgrade['cost']} C",
+                True,
+                price_color
             )
 
             self.display.blit(
                 price_text,
                 (
-                    card_x + card_width - price_text.get_width() - 7,
-                    card_y + 5
+                    card_x + card_width -
+                    price_text.get_width() - 
+                    6,
+                    card_y + 6
                 )
             )
 
-            level_text = self.small_font.render(
-                f"LV {level}",
-                True,
-                (130, 200, 255)
+            level_text = self.font_small.render(
+                f"LV {upgrade['level']}",
+                True, 
+                (120, 180, 230)
             )
 
             self.display.blit(
                 level_text,
                 (
-                    card_x + card_width - level_text.get_width() - 7,
-                    card_y + 20
+                    card_x + card_width - 
+                    level_text.get_width() - 
+                    6,
+                    card_y + 19
                 )
             )
 
-            card_y += 43
-
-        close_text = self.small_font.render(
-            "M - CLOSE",
+        footer = self.font_small.render(
+            '1-3 SELECT     ENTER BUY      M CLOSE',
             True,
-            (150, 150, 150)
+            (150, 150, 165)
         )
 
         self.display.blit(
-            close_text,
+            footer,
             (
-                shop_x + shop_width // 2 - close_text.get_width() // 2,
-                shop_y + shop_height - 15
+                shop_x + shop_width // 2 - footer.get_width() // 2,
+                shop_y + 210
             )
         )
 
+        if self.shop_flash > 0:
+            flash = pygame.Surface(
+                self.display.get_size(),
+                pygame.SRCALPHA
+            )
+
+            flash.fill(
+                (255, 255, 255, self.shop_flash * 15)
+            )
+
+            self.display.blit(
+                flash,
+                (0, 0)
+            )
+
+            self.shop_flash -= 1
+
     def draw_hud(self):
-        health_x = 10
-        health_y = 10
-        health_width = 80
-        health_height = 10
+        x = 8
+        y = 8
+        bar_width = 75
+        bar_height = 9
 
         pygame.draw.rect(
             self.display,
-            (35, 35, 40),
-            (health_x, health_y, health_width, health_height)
+            (30, 30, 35),
+            (x, y, bar_width, bar_height)
         )
 
-        health_width_current = int(
-            health_width * 
-            (self.player.health / self.player.max_health)
+        health_ratio = (
+            self.player.health / 
+            self.player.max_health
         )
 
         pygame.draw.rect(
             self.display,
-            (220, 60, 60),
-            (health_x, health_y, health_width_current, health_height)
+            (220, 60, 70),
+            (x, y, int(bar_width * health_ratio), bar_height)
         )
 
-        health_text = self.small_font.render(
+        pygame.draw.rect(
+            self.display,
+            (100, 100, 110),
+            (
+                x,
+                y,
+                bar_width,
+                bar_height
+            ),
+            1
+        )
+
+        health_text = self.font_small.render(
             f"{self.player.health}/{self.player.max_health}",
             True,
             (255, 255, 255)
@@ -340,19 +454,265 @@ class Game:
 
         self.display.blit(
             health_text,
-            (health_x + health_width + 5, health_y)
+            (x, y + 12)
+        )
+
+        pygame.draw.circle(
+            self.display,
+            (255, 215, 50),
+            (12, 36),
+            4
         )
 
         coin_text = self.font.render(
-            f"{self.player.coins}",
+            str(self.player.coins),
             True,
             (255, 220, 50)
         )
 
         self.display.blit(
             coin_text,
-            (10, 27)
+            (21, 31)
         )
+
+        if self.player.dash_timer > 0:
+            dash_text = self.font_small.render(
+                f"DASH {self.player.dash_timer}",
+                True,
+                (150, 190, 255)
+            )
+
+            self.display.blit(
+                dash_text,
+                (8, 45)
+            )
+
+        else:
+            dash_text = self.font_small.render(
+                "DASH READY",
+                True,
+                (100, 230, 150)
+            )
+
+            self.display.blit(
+                dash_text,
+                (8, 45)
+            )
+
+    def draw_upgrade_icon(self, icon, x, y):
+        if icon == 'speed':
+            color = (255, 220, 55)
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 10, y + 1, 7, 5)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 8, y + 6, 7, 5)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 6, y + 11, 7, 5)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 3, y + 16, 7, 6)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                (32, 35, 45),
+                (x + 3, y + 1, 7, 4)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                (32, 35, 45),
+                (x + 13, y + 11, 7, 5)
+            )
+
+        elif icon == 'dash':
+            color = (80, 200, 255)
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 2, y + 9, 15, 6)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 17, y + 6, 5, 12)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color, 
+                (x + 20, y + 9, 4, 6)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 20, y + 9, 4, 6)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 1, y + 5, 7, 2)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                color,
+                (x + 1, y + 17, 5, 2)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                (32, 35, 45),
+                (x + 17, y + 6, 3, 3)
+            )
+
+            pygame.draw.rect(
+                self.display,
+                (32, 35, 45),
+                (x + 17, y + 15, 3, 3)
+            )
+
+        elif icon == 'health':
+            color = (235, 65, 75)
+            pixels = [
+                (7, 3),
+                (8, 3),
+                (9, 3),
+                (15, 3),
+                (16, 3),
+                (17, 3),
+                (5, 5),
+                (6, 5),
+                (7, 5),
+                (8, 5),
+                (9, 5),
+                (10, 5),
+                (14, 5),
+                (15, 5),
+                (16, 5),
+                (17, 5),
+                (18, 5),
+                (19, 5),
+                (4, 7),
+                (5, 7),
+                (6, 7),
+                (7, 7),
+                (8, 7),
+                (9, 7),
+                (10, 7),
+                (11, 7),
+                (12, 7),
+                (13, 7),
+                (14, 7),
+                (15, 7),
+                (16, 7),
+                (17, 7),
+                (18, 7),
+                (19, 7),
+                (20, 7),
+                (5, 9),
+                (6, 9),
+                (7, 9),
+                (8, 9),
+                (9, 9),
+                (10, 9),
+                (11, 9),
+                (12, 9),
+                (13, 9),
+                (14, 9),
+                (15, 9),
+                (16, 9),
+                (17, 9),
+                (18, 9),
+                (19, 9),
+                (6, 11),
+                (7, 11),
+                (8, 11),
+                (9, 11),
+                (10, 11),
+                (11, 11),
+                (12, 11),
+                (13, 11),
+                (14, 11),
+                (15, 11),
+                (16, 11),
+                (17, 11),
+                (18, 11),
+                (8, 13),
+                (9, 13),
+                (10, 13),
+                (11, 13),
+                (12, 13),
+                (13, 13),
+                (14, 13),
+                (15, 13),
+                (16, 13),
+                (10, 15),
+                (11, 15),
+                (12, 15),
+                (13, 15),           
+                (14, 15),
+                (11, 17),
+                (12, 17),
+                (13, 17),
+            ]
+
+            for px, py in pixels:
+                pygame.draw.rect(
+                    self.display,
+                    color,
+                    (x + px, y + py, 2, 2)
+                )
+
+    def get_upgrade_info(self):
+        return [
+            {
+                'name': 'SPEED',
+                'description': 'MOVE FASTER',
+                'icon': 'speed',
+                'level': self.player.speed_level,
+                'cost': 10 + self.player.speed_level * 10,
+                'current': f'{1 + self.player.speed_level * 0.25:.2f}',
+                'next': f'{1 + (self.player.speed_level + 1) * 0.25:.2f}',
+            },
+
+            {
+                'name': 'DASH',
+                'description': 'LOWER COOLDOWN',
+                'icon': 'dash',
+                'level': self.player.dash_level,
+                'cost': 15 + self.player.dash_level * 15,
+                'current': f'{self.player.dash_cooldown / 60:.1f}s',
+                'next': f'{max(20, self.player.dash_cooldown - 10) / 60:.1f}s',
+            },
+
+            {
+                'name': 'HEALTH',
+                'description': 'INCREASE MAX HP',
+                'icon': 'health',
+                'level': self.player.health_level,
+                'cost': 20 + self.player.health_level * 20,
+                'current': f'{self.player.max_health}',
+                'next': f'{self.player.max_health + 1}',
+            }
+        ]
 
     def run(self):
         pygame.mixer.music.load('data/music.wav')
@@ -410,28 +770,29 @@ class Game:
                     self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
                 self.player.render(self.display, offset=render_scroll)
 
-            for projectile in self.projectiles.copy():
-                projectile[0][0] += projectile[1]
-                projectile[2] += 1
-                img = self.assets['projectile']
-                self.display.blit(img, (projectile[0][0] - img.get_width() / 2 - render_scroll[0], projectile[0][1] - img.get_height() / 2 - render_scroll[1]))
-                if self.tilemap.solid_check(projectile[0]):
-                    self.projectiles.remove(projectile)
-                    for i in range(4):
-                        self.sparks.append(Spark(projectile[0], random.random() - 0.5 + (math.pi if projectile[1] > 0 else 0), 2 + random.random()))
-                elif projectile[2] > 360:
-                    self.projectiles.remove(projectile)
-                elif abs(self.player.dashing) < 50:
-                    if self.player.rect().collidepoint(projectile[0]):
+            if not self.shop_open:
+                for projectile in self.projectiles.copy():
+                    projectile[0][0] += projectile[1]
+                    projectile[2] += 1
+                    img = self.assets['projectile']
+                    self.display.blit(img, (projectile[0][0] - img.get_width() / 2 - render_scroll[0], projectile[0][1] - img.get_height() / 2 - render_scroll[1]))
+                    if self.tilemap.solid_check(projectile[0]):
                         self.projectiles.remove(projectile)
-                        self.player.take_damage(1)
-                        self.sfx['hit'].play()
-                        self.screenshake = max(16, self.screenshake)
-                        for i in range(30):
-                            angle = random.random() * math.pi * 2
-                            speed = random.random() * 5
-                            self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
-                            self.particles.append(Particle(self, 'particle', self.player.rect().center, velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], frame=random.randint(0, 7)))  
+                        for i in range(4):
+                            self.sparks.append(Spark(projectile[0], random.random() - 0.5 + (math.pi if projectile[1] > 0 else 0), 2 + random.random()))
+                    elif projectile[2] > 360:
+                        self.projectiles.remove(projectile)
+                    elif abs(self.player.dashing) < 50:
+                        if self.player.rect().collidepoint(projectile[0]):
+                            self.projectiles.remove(projectile)
+                            self.player.take_damage(1)
+                            self.sfx['hit'].play()
+                            self.screenshake = max(16, self.screenshake)
+                            for i in range(30):
+                                angle = random.random() * math.pi * 2
+                                speed = random.random() * 5
+                                self.sparks.append(Spark(self.player.rect().center, angle, 2 + random.random()))
+                                self.particles.append(Particle(self, 'particle', self.player.rect().center, velocity=[math.cos(angle + math.pi) * speed * 0.5, math.sin(angle + math.pi) * speed * 0.5], frame=random.randint(0, 7)))  
 
             for spark in self.sparks.copy():
                 kill = spark.update()
@@ -462,29 +823,37 @@ class Game:
                         self.movement = [False, False]
                     if self.shop_open:
                         if event.key == pygame.K_1:
-                            cost = 10 + self.player.speed_level * 10
-                            if self.player.coins >= cost:
-                                self.player.coins -= cost
-                                self.player.speed_level += 1
-                        if event.key == pygame.K_2:
-                            cost = 15 + self.player.dash_level * 15
-                            if self.player.coins >= cost:
-                                self.player.coins -= cost
-                                self.player.dash_level += 1
-                                self.player.dash_cooldown = max(
-                                    20,
-                                    60 - self.player.dash_level * 10
-                                )
-                        if event.key == pygame.K_3:
-                            cost = 20 + self.player.health * 20
-                            if self.player.coins >= cost:
-                                self.player.coins = cost
-                                self.player.health_level += 1
+                            self.shop_selected = 0
+                        elif event.key == pygame.K_2:
+                            self.shop_selected = 1
+                        elif event.key == pygame.K_3:
+                            self.shop_selected = 2
+                        elif event.key == pygame.K_RETURN:
+                            upgrades = self.get_upgrade_info()
+                            upgrade = upgrades[self.shop_selected]
 
-                                self.player.max_health += 1
-                                self.player.health = self.player.max_health
+                            if self.player.coins >= upgrade['cost']:
+                                self.player.coins -= upgrade['cost']
+                                if self.shop_selected == 0:
+                                    self.player.speed_level += 1
+
+                                elif self.shop_selected == 1:
+                                    self.player.dash_level += 1
+
+                                    self.player.dash_cooldown = max(
+                                        20, 60 - 
+                                        self.player.dash_level * 10
+                                    )
+
+                                elif self.shop_selected == 2:
+                                    self.player.health_level += 1
+                                    self.player.max_health += 1
+                                    self.player.health = self.player.max_health
+
+                                self.shop_flash = 5
 
                         continue
+                            
 
                     if event.key == pygame.K_LEFT:
                         self.movement[0] = True
