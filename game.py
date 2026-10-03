@@ -411,6 +411,23 @@ class Game:
 
             self.shop_flash -= 1
 
+    def draw_text_outline(self, text, font, color, pos, outline_color=(0, 0, 0)):
+        outline_offsets = [
+            (-1, -1), (0, -1), (1, -1),
+            (-1, 0),           (1, 0),
+            (-1, 1), (0, 1), (1, 1)
+        ]
+
+        for ox, oy in outline_offsets:
+            outline = font.render(text, True, outline_color)
+            self.display.blit(
+                outline,
+                (pos[0] + ox, pos[1] + oy)
+            )
+
+        text_surface = font.render(text, True, color)
+        self.display.blit(text_surface, pos)
+
     def draw_hud(self):
         x = 8
         y = 8
@@ -419,43 +436,57 @@ class Game:
 
         pygame.draw.rect(
             self.display,
-            (30, 30, 35),
-            (x, y, bar_width, bar_height)
-        )
-
-        health_ratio = (
-            self.player.health / 
-            self.player.max_health
+            (0, 0, 0),
+            (x - 2, y - 2, bar_width + 4, bar_height + 4)
         )
 
         pygame.draw.rect(
             self.display,
-            (220, 60, 70),
-            (x, y, int(bar_width * health_ratio), bar_height)
-        )
-
-        pygame.draw.rect(
-            self.display,
-            (100, 100, 110),
+            (45, 45, 50),
             (
                 x,
                 y,
                 bar_width,
                 bar_height
-            ),
-            1
+            )
         )
 
-        health_text = self.font_small.render(
-            f"{self.player.health}/{self.player.max_health}",
-            True,
-            (255, 255, 255)
+
+        health_ratio = max(
+            0,
+            min(
+                1,
+                self.player.health / self.player.max_health
+            )
         )
 
-        self.display.blit(
-            health_text,
-            (x, y + 12)
+        health_width = int(
+            bar_width * health_ratio
         )
+
+        if health_width > 0:
+            pygame.draw.rect(
+                self.display,
+                (220, 50, 60),
+                (
+                    x,
+                    y,
+                    health_width,
+                    bar_height
+                )
+            )
+
+        if health_width > 2:
+            pygame.draw.rect(
+                self.display,
+                (245, 75, 80),
+                (
+                    x,
+                    y,
+                    health_width,
+                    2
+                )
+            )
 
         pygame.draw.circle(
             self.display,
@@ -464,38 +495,34 @@ class Game:
             4
         )
 
-        coin_text = self.font.render(
-            str(self.player.coins),
-            True,
-            (255, 220, 50)
+        pygame.draw.circle(
+            self.display,
+            (0, 0, 0),
+            (12, 36),
+            4,
+            1
         )
 
-        self.display.blit(
-            coin_text,
+        self.draw_text_outline(
+            str(self.player.coins),
+            self.font,
+            (255, 220, 70),
             (21, 31)
         )
 
         if self.player.dash_timer > 0:
-            dash_text = self.font_small.render(
+            self.draw_text_outline(
                 f"DASH {self.player.dash_timer}",
-                True,
-                (150, 190, 255)
-            )
-
-            self.display.blit(
-                dash_text,
+                self.font_small,
+                (150, 190, 255),
                 (8, 45)
             )
 
         else:
-            dash_text = self.font_small.render(
+            self.draw_text_outline(
                 "DASH READY",
-                True,
-                (100, 230, 150)
-            )
-
-            self.display.blit(
-                dash_text,
+                self.font_small,
+                (100, 230, 150),
                 (8, 45)
             )
 
