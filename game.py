@@ -28,6 +28,11 @@ class Game:
             11
         )
 
+        self.title_font = pygame.font.Font(
+            'data/fonts/Ruler.ttf',
+            60
+        )
+
         self.font = pygame.font.Font(
             'data/fonts/PressStart2P-Regular.ttf',
             6
@@ -60,7 +65,6 @@ class Game:
             'particle/particle': Animation(load_images('particles/particle'), img_dur=6, loop=False),
             'gun': load_image('gun.png'),
             'projectile': load_image('projectile.png'),
-            'title': load_image('title_background.png'),
             'title_sword': load_image('title_sword.png'),
         }
 
@@ -756,21 +760,50 @@ class Game:
                 1, (self.title_timer - 80) / 60
             )
 
-            background_alpha = int(255 * background_progress)
+            scene = pygame.Surface(
+                self.display.get_size(),
+                pygame.SRCALPHA
+            )
 
-            background = self.assets['background'].copy()
-            background.set_alpha(background_alpha)
+            scene.blit(
+                self.assets['background'],
+                (0, 0)
+            )
+
+            self.clouds.update()
+            self.clouds.render(
+                scene,
+                offset=(0, 0)
+            )
+
+            self.tilemap.render(
+                scene,
+                offset=(0, 0)
+            )
+
+            scene.set_alpha(
+                max(0, min(255, int(255 * background_progress)))
+            )
+
             self.display.blit(
-                background, 
-                (
-                    self.display.get_width() // 2 - background.get_width() // 2,
-                    self.display.get_height() // 2 - background.get_height() // 2
-                )
+                scene,
+                (0, 0)
             )
 
         text_fade = min(255, self.title_timer * 4)
-        title_image = self.assets['title'].copy()
+        title_image = self.title_font.render(
+            'NINJARO',
+            True,
+            (245, 49, 49)
+        )
+
+        title_outline = self.title_font.render(
+            'NINJARO',
+            True,
+            (0, 0, 0)
+        )
         title_image.set_alpha(text_fade)
+        title_outline.set_alpha(text_fade)
         title_x = (
             self.display.get_width() // 2 - title_image.get_width() // 2
         )
@@ -800,6 +833,16 @@ class Game:
 
             self.display.blit(
                 sword, (sword_x, int(sword_y))
+            )
+
+        for ox, oy in [
+            (-1, -1), (0, -1), (1, -1),
+            (-1, 0),           (1, 0), 
+            (-1, 0), (0, 1), (1, 1)
+        ]:
+            self.display.blit(
+                title_outline,
+                (title_x + ox, title_y + oy)
             )
 
         self.display.blit(
