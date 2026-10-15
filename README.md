@@ -18,7 +18,7 @@ Pretty big game, faced many issues. One problem I ran into was packaging the gam
 
 ## How to play
 
-1. Download 'Ninjaro-Linux.zip'.
+1. Download 'Ninjaro-Linux.zip' from Release
 2. Extract the zip file.
 3. Open the 'Ninjaro' folder.
 4. Run the 'Ninjaro' executable.
