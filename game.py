@@ -12,6 +12,14 @@ from scripts.clouds import Clouds
 from scripts.particle import Particle
 from scripts.spark import Spark
 
+def resource_path(relative_path):
+    if hasattr(sys, "_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    return os.path.join(base_path, relative_path)
+
 class Game:
     def __init__(self):
         pygame.init()
@@ -24,22 +32,22 @@ class Game:
         self.clock = pygame.time.Clock()
 
         self.font_big = pygame.font.Font(
-            'data/fonts/PressStart2P-Regular.ttf',
+            resource_path('data/fonts/PressStart2P-Regular.ttf'),
             11
         )
 
         self.title_font = pygame.font.Font(
-            'data/fonts/Ruler.ttf',
+            resource_path('data/fonts/Ruler.ttf'),
             60
         )
 
         self.font = pygame.font.Font(
-            'data/fonts/PressStart2P-Regular.ttf',
+            resource_path('data/fonts/PressStart2P-Regular.ttf'),
             6
         )
 
         self.font_small = pygame.font.Font(
-            'data/fonts/PressStart2P-Regular.ttf',
+            resource_path('data/fonts/PressStart2P-Regular.ttf'),
             5
         )
 
@@ -69,11 +77,11 @@ class Game:
         }
 
         self.sfx = {
-            'jump': pygame.mixer.Sound('data/sfx/jump.wav'),
-            'dash': pygame.mixer.Sound('data/sfx/dash.wav'),
-            'hit': pygame.mixer.Sound('data/sfx/hit.wav'),
-            'shoot': pygame.mixer.Sound('data/sfx/shoot.wav'),
-            'ambience': pygame.mixer.Sound('data/sfx/ambience.wav'),
+            'jump': pygame.mixer.Sound(resource_path('data/sfx/jump.wav')),
+            'dash': pygame.mixer.Sound(resource_path('data/sfx/dash.wav')),
+            'hit': pygame.mixer.Sound(resource_path('data/sfx/hit.wav')),
+            'shoot': pygame.mixer.Sound(resource_path('data/sfx/shoot.wav')),
+            'ambience': pygame.mixer.Sound(resource_path('data/sfx/ambience.wav')),
         }
 
         self.sfx['ambience'].set_volume(0.2)
@@ -102,7 +110,7 @@ class Game:
         self.title_started = False
 
     def load_level(self, map_id):
-        self.tilemap.load('data/maps/' + str(map_id) + '.json')
+        self.tilemap.load(resource_path('data/maps/' + str(map_id) + '.json'))
 
         self.leaf_spawners = []
         for tree in self.tilemap.extract([('large_decor', 2)], keep=True):
@@ -894,7 +902,7 @@ class Game:
                 )
 
     def run(self):
-        pygame.mixer.music.load('data/music.wav')
+        pygame.mixer.music.load(resource_path('data/music.wav'))
         pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.play(-1)
 
@@ -926,7 +934,7 @@ class Game:
             if not len(self.enemies):
                 self.transition += 1
                 if self.transition > 30:
-                    self.level = min(self.level + 1, len(os.listdir('data/maps')) - 1)
+                    self.level = min(self.level + 1, len(os.listdir(resource_path('data/maps'))) - 1)
                     self.load_level(self.level)
             if self.transition < 0:
                 self.transition += 1

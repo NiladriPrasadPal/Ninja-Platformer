@@ -1,17 +1,30 @@
 import os
+import sys
 
 import pygame
 
-BASE_IMG_PATH = 'data/images/'
+def resource_path(relative_path):
+    if hasattr(sys,"_MEIPASS"):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__))
+        )
+    return os.path.join(base_path, relative_path)
+
+BASE_IMG_PATH = resource_path('data/images')
 
 def load_image(path):
-    img = pygame.image.load(BASE_IMG_PATH + path).convert()
+    img = pygame.image.load(os.path.join(BASE_IMG_PATH, path)).convert()
     img.set_colorkey((0, 0, 0))
     return img
 
 def load_images(path):
     images = []
-    for img_name in sorted(os.listdir(BASE_IMG_PATH + path)):
+
+    folder_path = os.path.join(BASE_IMG_PATH, path)
+
+    for img_name in sorted(os.listdir(folder_path)):
         images.append(load_image(path + '/' + img_name))
     return images
 
