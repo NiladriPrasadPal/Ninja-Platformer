@@ -32,11 +32,11 @@ If you want to run the game using Python, make sure Python and Pygame are instal
 ```bash
 python -m pip install pygame
 python game.py
+```
 
 ## ai disclosure
 
 used ai to solve packaging issues
-
 
 here are some snips of my game!
 
